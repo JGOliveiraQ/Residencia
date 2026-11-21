@@ -1,0 +1,12 @@
+package br.com.stockmanager.service;
+import br.com.stockmanager.dto.*; import br.com.stockmanager.entity.Supplier; import br.com.stockmanager.exception.*; import br.com.stockmanager.repository.SupplierRepository; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.util.*;
+@Service public class SupplierService{
+ private final SupplierRepository repo; public SupplierService(SupplierRepository repo){this.repo=repo;}
+ @Transactional(readOnly=true) public List<SupplierResponse> findAll(){return repo.findAll().stream().map(this::toResponse).toList();}
+ @Transactional(readOnly=true) public Supplier get(Long id){return repo.findById(id).orElseThrow(()->new ResourceNotFoundException("Fornecedor não encontrado."));}
+ @Transactional public SupplierResponse create(SupplierRequest r){String c=digits(r.cnpj());validateCnpj(c);if(repo.existsByCnpj(c))throw new DuplicateResourceException("CNPJ já cadastrado.");return toResponse(repo.save(new Supplier(r.corporateName(),r.tradeName(),c,r.phone(),r.email(),r.address(),r.city(),r.state())));}
+ @Transactional public SupplierResponse update(Long id,SupplierRequest r){Supplier s=get(id);String c=digits(r.cnpj());validateCnpj(c);repo.findByCnpj(c).filter(x->!x.getId().equals(id)).ifPresent(x->{throw new DuplicateResourceException("CNPJ já cadastrado.");});s.setCorporateName(r.corporateName());s.setTradeName(r.tradeName());s.setCnpj(c);s.setPhone(r.phone());s.setEmail(r.email());s.setAddress(r.address());s.setCity(r.city());s.setState(r.state());return toResponse(s);}
+ @Transactional public void status(Long id,boolean active){get(id).setActive(active);}
+ private String digits(String s){return s==null?null:s.replaceAll("\\D","");} private void validateCnpj(String c){if(c==null||c.length()!=14||c.chars().distinct().count()==1)throw new BusinessException("CNPJ inválido.");int[] w={5,4,3,2,9,8,7,6,5,4,3,2};for(int pos=0;pos<2;pos++){int sum=0;for(int i=0;i<12+pos;i++)sum+=Character.digit(c.charAt(i),10)*w[i+pos];int d=(sum*10)%11;if(d==10)d=0;if(d!=Character.digit(c.charAt(12+pos),10))throw new BusinessException("CNPJ inválido.");} }
+ private SupplierResponse toResponse(Supplier s){return new SupplierResponse(s.getId(),s.getCorporateName(),s.getTradeName(),s.getCnpj(),s.getPhone(),s.getEmail(),s.getAddress(),s.getCity(),s.getState(),s.isActive());}
+}

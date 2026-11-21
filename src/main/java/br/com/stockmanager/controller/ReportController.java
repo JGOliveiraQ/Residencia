@@ -1,0 +1,7 @@
+package br.com.stockmanager.controller;
+import br.com.stockmanager.repository.ProductRepository; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.nio.charset.StandardCharsets;
+@RestController @RequestMapping("/api/reports") public class ReportController{
+ private final ProductRepository products; public ReportController(ProductRepository products){this.products=products;}
+ @GetMapping(value="/stock",produces="text/csv") public ResponseEntity<byte[]> stock(){StringBuilder csv=new StringBuilder("SKU;Produto;Categoria;Unidade;Estoque;Custo médio;Valor\n");products.findAll().forEach(p->csv.append(p.getSku()).append(';').append(p.getName()).append(';').append(p.getCategory().getName()).append(';').append(p.getUnit()).append(';').append(p.getCurrentStock()).append(';').append(p.getCostPrice()).append(';').append(p.getCurrentStock().multiply(p.getCostPrice())).append('\n'));return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=estoque.csv").body(csv.toString().getBytes(StandardCharsets.UTF_8));}
+ @GetMapping(value="/low-stock",produces="text/csv") public ResponseEntity<byte[]> lowStock(){StringBuilder csv=new StringBuilder("SKU;Produto;Estoque atual;Estoque mínimo\n");products.findLowStock().forEach(p->csv.append(p.getSku()).append(';').append(p.getName()).append(';').append(p.getCurrentStock()).append(';').append(p.getMinimumStock()).append('\n'));return ResponseEntity.ok(csv.toString().getBytes(StandardCharsets.UTF_8));}
+}
