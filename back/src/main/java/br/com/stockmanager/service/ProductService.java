@@ -1,0 +1,15 @@
+package br.com.stockmanager.service;
+import br.com.stockmanager.dto.*; import br.com.stockmanager.entity.*; import br.com.stockmanager.exception.*; import br.com.stockmanager.repository.*; import org.springframework.data.domain.*; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.util.*;
+@Service public class ProductService{
+ private final ProductRepository products; private final CategoryService categories;
+ public ProductService(ProductRepository products,CategoryService categories){this.products=products;this.categories=categories;}
+ @Transactional(readOnly=true) public Page<ProductResponse> find(String search,Pageable page){Page<Product> p=search==null||search.isBlank()?products.findAll(page):products.findByNameContainingIgnoreCaseOrSkuContainingIgnoreCase(search,search,page);return p.map(this::toResponse);}
+ @Transactional(readOnly=true) public Product get(Long id){return products.findById(id).orElseThrow(()->new ResourceNotFoundException("Produto não encontrado."));}
+ @Transactional(readOnly=true) public ProductResponse findById(Long id){return toResponse(get(id));}
+ @Transactional public ProductResponse create(ProductRequest r){if(products.existsBySkuIgnoreCase(r.sku()))throw new DuplicateResourceException("SKU já cadastrado.");Category c=categories.get(r.categoryId());if(!c.isActive())throw new BusinessException("A categoria está inativa.");return toResponse(products.save(new Product(r.sku().trim(),r.name().trim(),r.description(),r.brand(),r.unit(),r.costPrice(),r.salePrice(),r.minimumStock(),c)));}
+ @Transactional public ProductResponse update(Long id,ProductRequest r){Product p=get(id);if(products.findBySkuIgnoreCase(r.sku()).filter(x->!x.getId().equals(id)).isPresent())throw new DuplicateResourceException("SKU já cadastrado.");Category c=categories.get(r.categoryId());if(!c.isActive())throw new BusinessException("A categoria está inativa.");p.setSku(r.sku().trim());p.setName(r.name().trim());p.setDescription(r.description());p.setBrand(r.brand());p.setUnit(r.unit());p.setCostPrice(r.costPrice());p.setSalePrice(r.salePrice());p.setMinimumStock(r.minimumStock());p.setCategory(c);return toResponse(p);}
+ @Transactional public void status(Long id,boolean active){get(id).setActive(active);}
+ @Transactional(readOnly=true) public List<ProductResponse> lowStock(){return products.findLowStock().stream().map(this::toResponse).toList();}
+ @Transactional(readOnly=true) public List<ProductResponse> outOfStock(){return products.findAll().stream().filter(p->p.isActive()&&p.getCurrentStock().signum()==0).map(this::toResponse).toList();}
+ private ProductResponse toResponse(Product p){return new ProductResponse(p.getId(),p.getSku(),p.getName(),p.getDescription(),p.getBrand(),p.getUnit(),p.getCostPrice(),p.getSalePrice(),p.getCurrentStock(),p.getMinimumStock(),p.isActive(),p.getCategory().getId(),p.getCategory().getName());}
+}

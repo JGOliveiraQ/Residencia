@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    # H2 em arquivo (persiste os dados ao reiniciar):
+    url: jdbc:h2:file:./data/stockmanager;AUTO_SERVER=TRUE
+    # Se preferir H2 100% em memoria (zera ao reiniciar), basta descomentar a linha abaixo:
+    # url: jdbc:h2:mem:stockmanager;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+logging:
+  level:
+    org.hibernate.SQL: info
